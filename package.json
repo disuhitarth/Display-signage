@@ -1,0 +1,29 @@
+{
+  "name": "pizza-depot-signage",
+  "version": "1.0.0",
+  "description": "Pizza Depot Digital Signage — Franchise Display Management System. Remotely control menu content on store TVs from a central admin dashboard.",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/local-server.js",
+    "dev": "npx nodemon src/local-server.js",
+    "build": "echo 'No build step needed'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "serverless-http": "^3.2.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "@netlify/blobs": "^8.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["digital-signage", "franchise", "display-management", "pizza-depot", "netlify"],
+  "author": "Pizza Depot",
+  "license": "MIT"
+}
