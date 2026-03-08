@@ -1,19 +1,24 @@
 const path = require("path");
 const fs = require("fs");
 
-const IS_NETLIFY = !!process.env.NETLIFY || !!process.env.NETLIFY_BLOBS_CONTEXT;
-const LOCAL_DATA_DIR = path.join(__dirname, "..", "data");
-
-// Only create local data dir when NOT on Netlify
-if (!IS_NETLIFY) {
+// Detect Netlify: check multiple indicators + check if filesystem is writable
+const IS_LOCAL = (function() {
   try {
-    if (!fs.existsSync(LOCAL_DATA_DIR)) {
-      fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
+    const testDir = path.join(__dirname, "..", "data");
+    if (!fs.existsSync(testDir)) {
+      fs.mkdirSync(testDir, { recursive: true });
     }
+    // Test write
+    const testFile = path.join(testDir, ".write-test");
+    fs.writeFileSync(testFile, "ok");
+    fs.unlinkSync(testFile);
+    return true;
   } catch (e) {
-    console.log("Could not create data dir:", e.message);
+    return false;
   }
-}
+})();
+
+const LOCAL_DATA_DIR = path.join(__dirname, "..", "data");
 
 let blobStore = null;
 
@@ -30,15 +35,7 @@ async function getBlobStore() {
 }
 
 async function getData(key, defaultValue = null) {
-  if (IS_NETLIFY) {
-    try {
-      const store = await getBlobStore();
-      const val = await store.get(key);
-      return val ? JSON.parse(val) : defaultValue;
-    } catch (e) {
-      return defaultValue;
-    }
-  } else {
+  if (IS_LOCAL) {
     const filepath = path.join(LOCAL_DATA_DIR, key + ".json");
     try {
       if (fs.existsSync(filepath)) {
@@ -46,32 +43,41 @@ async function getData(key, defaultValue = null) {
       }
     } catch (e) {}
     return defaultValue;
+  } else {
+    try {
+      const store = await getBlobStore();
+      if (!store) return defaultValue;
+      const val = await store.get(key);
+      return val ? JSON.parse(val) : defaultValue;
+    } catch (e) {
+      return defaultValue;
+    }
   }
 }
 
 async function setData(key, value) {
-  if (IS_NETLIFY) {
+  if (IS_LOCAL) {
+    const filepath = path.join(LOCAL_DATA_DIR, key + ".json");
+    fs.writeFileSync(filepath, JSON.stringify(value, null, 2), "utf-8");
+  } else {
     try {
       const store = await getBlobStore();
-      await store.set(key, JSON.stringify(value));
+      if (store) await store.set(key, JSON.stringify(value));
     } catch (e) {
       console.error("Blob write error:", e.message);
     }
-  } else {
-    const filepath = path.join(LOCAL_DATA_DIR, key + ".json");
-    fs.writeFileSync(filepath, JSON.stringify(value, null, 2), "utf-8");
   }
 }
 
 async function deleteData(key) {
-  if (IS_NETLIFY) {
-    try {
-      const store = await getBlobStore();
-      await store.delete(key);
-    } catch (e) {}
-  } else {
+  if (IS_LOCAL) {
     const filepath = path.join(LOCAL_DATA_DIR, key + ".json");
     if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  } else {
+    try {
+      const store = await getBlobStore();
+      if (store) await store.delete(key);
+    } catch (e) {}
   }
 }
 
