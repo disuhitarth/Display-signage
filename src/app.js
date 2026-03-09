@@ -525,7 +525,11 @@ function getAdminHTML(user) {
       <div class="add-media-section" style="margin-top:12px">
         <div class="playlist-label">Add Media by URL</div>
         <input type="text" id="newMediaName" placeholder="Name (e.g. Summer Promo)">
-        <input type="text" id="newMediaUrl" placeholder="Image URL (https://...)">
+        <input type="text" id="newMediaUrl" placeholder="URL (https://...)">
+        <select id="newMediaType" style="width:100%;padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;margin-bottom:8px;font-family:var(--sans)">
+          <option value="image">Image</option>
+          <option value="video">Video (MP4, WebM)</option>
+        </select>
         <button class="add-btn" onclick="addMediaByUrl()">+ Add to Library</button>
       </div>
     </div>
@@ -642,8 +646,9 @@ function getAdminHTML(user) {
     async function addMediaByUrl(){
       const name=document.getElementById("newMediaName").value.trim();
       const url=document.getElementById("newMediaUrl").value.trim();
+      const type=document.getElementById("newMediaType").value;
       if(!name||!url){toast("Name and URL required");return}
-      await api("/api/media",{method:"POST",body:JSON.stringify({name,url,type:"image"})});
+      await api("/api/media",{method:"POST",body:JSON.stringify({name,url,type})});
       document.getElementById("newMediaName").value="";
       document.getElementById("newMediaUrl").value="";
       media=await api("/api/media");renderSidebar();renderScreens();toast("Media added");
