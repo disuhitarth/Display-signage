@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs");
 
 // Detect Netlify: check multiple indicators + check if filesystem is writable
-const IS_LOCAL = (function() {
+const IS_LOCAL = (function () {
   try {
     const testDir = path.join(__dirname, "..", "data");
     if (!fs.existsSync(testDir)) {
@@ -18,6 +18,8 @@ const IS_LOCAL = (function() {
   }
 })();
 
+console.log("[store] Mode:", IS_LOCAL ? "LOCAL (file system)" : "NETLIFY (blobs)");
+
 const LOCAL_DATA_DIR = path.join(__dirname, "..", "data");
 
 let blobStore = null;
@@ -26,10 +28,11 @@ async function getBlobStore() {
   if (blobStore) return blobStore;
   try {
     const { getStore } = require("@netlify/blobs");
-    blobStore = getStore("signage-data");
+    blobStore = getStore({ name: "signage-data", consistency: "strong" });
+    console.log("[store] Netlify Blobs initialized (strong consistency)");
     return blobStore;
   } catch (e) {
-    console.error("Netlify Blobs not available:", e.message);
+    console.error("[store] Netlify Blobs init FAILED:", e.message);
     return null;
   }
 }
@@ -41,15 +44,22 @@ async function getData(key, defaultValue = null) {
       if (fs.existsSync(filepath)) {
         return JSON.parse(fs.readFileSync(filepath, "utf-8"));
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("[store] Local read error:", key, e.message);
+    }
     return defaultValue;
   } else {
     try {
       const store = await getBlobStore();
-      if (!store) return defaultValue;
+      if (!store) {
+        console.error("[store] No blob store for getData:", key);
+        return defaultValue;
+      }
       const val = await store.get(key);
+      console.log("[store] GET", key, "->", val ? val.length + " chars" : "null");
       return val ? JSON.parse(val) : defaultValue;
     } catch (e) {
+      console.error("[store] Blob read error:", key, e.message);
       return defaultValue;
     }
   }
@@ -62,9 +72,21 @@ async function setData(key, value) {
   } else {
     try {
       const store = await getBlobStore();
-      if (store) await store.set(key, JSON.stringify(value));
+      if (!store) {
+        console.error("[store] No blob store for setData:", key);
+        return;
+      }
+      const json = JSON.stringify(value);
+      await store.set(key, json);
+      console.log("[store] SET", key, "->", json.length, "chars OK");
+
+      // Verify write succeeded by reading back
+      const verify = await store.get(key);
+      if (!verify) {
+        console.error("[store] VERIFY FAILED - written data not readable:", key);
+      }
     } catch (e) {
-      console.error("Blob write error:", e.message);
+      console.error("[store] Blob write error:", key, e.message, e.stack);
     }
   }
 }
@@ -77,7 +99,9 @@ async function deleteData(key) {
     try {
       const store = await getBlobStore();
       if (store) await store.delete(key);
-    } catch (e) {}
+    } catch (e) {
+      console.error("[store] Blob delete error:", key, e.message);
+    }
   }
 }
 
