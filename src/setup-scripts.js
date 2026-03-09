@@ -1,15 +1,4 @@
-const fs = require("fs");
-const path = require("path");
-
-const PS1_TEMPLATE = fs.readFileSync(
-    path.join(__dirname, "templates", "LaunchSignage.ps1.template"),
-    "utf-8"
-);
-
-const BAT_TEMPLATE = fs.readFileSync(
-    path.join(__dirname, "templates", "Setup-PizzaSignage.bat.template"),
-    "utf-8"
-);
+const { PS1_TEMPLATE, BAT_TEMPLATE } = require("./template-data");
 
 function getPs1Template(baseURL, storeID) {
     return PS1_TEMPLATE
