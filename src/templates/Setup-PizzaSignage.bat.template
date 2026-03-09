@@ -1,0 +1,14 @@
+@echo off
+title Pizza Depot Signage - Application Setup
+color 0C
+
+echo.
+echo Installing Pizza Depot Digital Signage...
+if not exist "%USERPROFILE%\PizzaSignage" mkdir "%USERPROFILE%\PizzaSignage"
+copy /Y "%~dp0LaunchSignage.ps1" "%USERPROFILE%\PizzaSignage\LaunchSignage.ps1" >nul
+powershell -ExecutionPolicy Bypass -File "%USERPROFILE%\PizzaSignage\LaunchSignage.ps1" -Install
+
+echo.
+echo  SETUP COMPLETE! Starting displays...
+start /min powershell -ExecutionPolicy Bypass -WindowStyle Hidden -File "%USERPROFILE%\PizzaSignage\LaunchSignage.ps1" -NoWatchdog
+pause
