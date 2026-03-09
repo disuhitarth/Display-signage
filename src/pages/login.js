@@ -29,6 +29,8 @@ function getLoginHTML(error) {
     .submit-btn:hover{box-shadow:0 6px 28px rgba(232,78,15,0.4);transform:translateY(-1px)}\
     .submit-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}\
     .footer-note{text-align:center;margin-top:24px;font-family:var(--mono);font-size:10px;color:var(--text-muted)}\
+    .default-creds{margin-top:16px;padding:10px 14px;background:rgba(232,78,15,0.06);border:1px solid rgba(232,78,15,0.15);border-radius:10px;font-family:var(--mono);font-size:11px;color:var(--text-dim);text-align:center}\
+    .default-creds strong{color:var(--fire)}\
   </style>\
 </head>\
 <body>\
@@ -54,6 +56,7 @@ function getLoginHTML(error) {
       <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>\
     </form>\
     <div class="footer-note">Franchise Display Management System</div>\
+    <div class="default-creds">Default login — <strong>admin</strong> / <strong>admin123</strong><br>Change your password after first login.</div>\
   </div>\
   <script>\
     document.getElementById("loginForm").addEventListener("submit",async function(e){\
