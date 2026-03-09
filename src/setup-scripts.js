@@ -1,5 +1,5 @@
 function getPs1Template(baseURL, storeID) {
-  return `<#
+    return `<#
 ╔══════════════════════════════════════════════════════════════════╗
 ║  Pizza Depot Digital Signage — Store Launcher                    ║
 ║  Auto-detects monitors, launches Chrome kiosk on each screen     ║
@@ -72,35 +72,35 @@ function Find-Chrome {
         "\${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe",
         "$env:LOCALAPPDATA\\Google\\Chrome\\Application\\chrome.exe"
     )
-    
-    foreach ($path in $paths) {
-        if (Test-Path $path) {
-            Write-Log "Found Chrome at: $path" "OK"
-            return $path
-        }
+
+foreach($path in $paths) {
+    if (Test-Path $path) {
+        Write-Log "Found Chrome at: $path" "OK"
+        return $path
     }
+}
     
     # Try Edge as fallback
-    $edgePath = "$env:ProgramFiles\\Microsoft\\Edge\\Application\\msedge.exe"
-    if (Test-Path $edgePath) {
-        Write-Log "Chrome not found, using Microsoft Edge as fallback" "WARN"
-        return $edgePath
-    }
-    
-    Write-Log "No compatible browser found!" "ERROR"
-    return $null
+$edgePath = "$env:ProgramFiles\\Microsoft\\Edge\\Application\\msedge.exe"
+if (Test-Path $edgePath) {
+    Write-Log "Chrome not found, using Microsoft Edge as fallback" "WARN"
+    return $edgePath
+}
+
+Write-Log "No compatible browser found!" "ERROR"
+return $null
 }
 
 # ─── DETECT MONITORS ───────────────────────────────────────────────
 function Get-MonitorInfo {
     Write-Log "Detecting connected monitors..."
-    
+
     Add-Type -AssemblyName System.Windows.Forms
     $screens = [System.Windows.Forms.Screen]::AllScreens
-    
+
     $monitors = @()
     $index = 0
-    foreach ($screen in $screens) {
+    foreach($screen in $screens) {
         $index++
         $bounds = $screen.Bounds
         $monitor = @{
@@ -115,7 +115,7 @@ function Get-MonitorInfo {
         $monitors += $monitor
         Write-Log "  Monitor $index: $($bounds.Width)x$($bounds.Height) at ($($bounds.X),$($bounds.Y)) $(if($screen.Primary){'[PRIMARY]'})" "OK"
     }
-    
+
     Write-Log "Total monitors detected: $($monitors.Count)"
     return $monitors
 }
@@ -123,7 +123,7 @@ function Get-MonitorInfo {
 # ─── KILL EXISTING CHROME ──────────────────────────────────────────
 function Stop-ExistingChrome {
     if (-not $CONFIG.KillExisting) { return }
-    
+
     Write-Log "Closing existing Chrome instances..."
     $chromeProcesses = Get-Process -Name "chrome" -ErrorAction SilentlyContinue
     if ($chromeProcesses) {
@@ -142,11 +142,11 @@ function Set-AlwaysOn {
     # Disable screen saver
     Set-ItemProperty -Path "HKCU:\\Control Panel\\Desktop" -Name "ScreenSaveActive" -Value "0" -ErrorAction SilentlyContinue
     
-    # Set power plan to never sleep (display and system)
+    # Set power plan to never sleep(display and system)
     powercfg /change monitor-timeout-ac 0
     powercfg /change standby-timeout-ac 0
     powercfg /change hibernate-timeout-ac 0
-    
+
     Write-Log "Power settings configured — screens will stay on" "OK"
 }
 
@@ -156,7 +156,7 @@ function Hide-Cursor {
     Add-Type -AssemblyName System.Windows.Forms
     $totalWidth = 0
     $totalHeight = 0
-    foreach ($screen in [System.Windows.Forms.Screen]::AllScreens) {
+    foreach($screen in [System.Windows.Forms.Screen]::AllScreens) {
         $right = $screen.Bounds.X + $screen.Bounds.Width
         $bottom = $screen.Bounds.Y + $screen.Bounds.Height
         if ($right -gt $totalWidth) { $totalWidth = $right }
@@ -172,18 +172,18 @@ function Start-SignageDisplays {
         [string]$ChromePath,
         [array]$Monitors
     )
-    
+
     $screenCount = $Monitors.Count
     Write-Log "Launching signage on $screenCount screen(s)..."
     
     # Create a unique Chrome user data dir to avoid profile conflicts
     $userDataDir = "$env:USERPROFILE\\PizzaSignage\\ChromeData"
-    if (-not (Test-Path $userDataDir)) {
+    if (-not(Test-Path $userDataDir)) {
         New-Item -ItemType Directory -Path $userDataDir -Force | Out-Null
     }
-    
+
     $screenNum = 0
-    foreach ($monitor in $Monitors) {
+    foreach($monitor in $Monitors) {
         $screenNum++
         
         # Build the display URL for this screen
@@ -194,22 +194,22 @@ function Start-SignageDisplays {
         
         # Chrome flags for kiosk mode
         $chromeArgs = @(
-            "--kiosk"                                    # Fullscreen kiosk mode
-            "--no-first-run"                             # Skip first-run wizard
-            "--disable-infobars"                         # No info bars
-            "--disable-session-crashed-bubble"            # No crash recovery popup
-            "--disable-features=TranslateUI"              # No translate bar
-            "--disable-background-networking"              # Reduce background activity
-            "--disable-sync"                              # No Chrome sync
-            "--disable-extensions"                         # No extensions
-            "--noerrdialogs"                              # No error dialogs
-            "--disable-popup-blocking"                     # Allow popups if needed
-            "--autoplay-policy=no-user-gesture-required"  # Allow video autoplay
-            "--user-data-dir=\`"$profileDir\`""             # Separate profile per screen
-            "--window-position=$($monitor.X),$($monitor.Y)"  # Position on correct monitor
-            "--window-size=$($monitor.Width),$($monitor.Height)"  # Match monitor resolution
-            "--start-fullscreen"                           # Start fullscreen
-            "\`"$displayURL\`""                             # The URL to display
+                "--kiosk"                                    # Fullscreen kiosk mode
+                "--no-first-run"                             # Skip first-run wizard
+                "--disable-infobars"                         # No info bars
+                "--disable-session-crashed-bubble"            # No crash recovery popup
+                "--disable-features=TranslateUI"              # No translate bar
+                "--disable-background-networking"              # Reduce background activity
+                "--disable-sync"                              # No Chrome sync
+                "--disable-extensions"                         # No extensions
+                "--noerrdialogs"                              # No error dialogs
+                "--disable-popup-blocking"                     # Allow popups if needed
+                "--autoplay-policy=no-user-gesture-required"  # Allow video autoplay
+                "--user-data-dir=\`"$profileDir\`""             # Separate profile per screen
+                "--window-position=$($monitor.X),$($monitor.Y)"  # Position on correct monitor
+                "--window-size=$($monitor.Width),$($monitor.Height)"  # Match monitor resolution
+                "--start-fullscreen"                           # Start fullscreen
+                "\`"$displayURL\`""                             # The URL to display
         )
         
         $argString = $chromeArgs -join " "
@@ -220,7 +220,7 @@ function Start-SignageDisplays {
         Start-Process -FilePath $ChromePath -ArgumentList $argString
         
         # Small delay between launches to let Windows handle window placement
-        Start-Sleep -Seconds $CONFIG.WindowDelay
+        Start-Sleep -Seconds $($CONFIG.WindowDelay)
     }
     
     Write-Log "All $screenNum display(s) launched successfully!" "OK"
@@ -424,7 +424,7 @@ if (-not $NoWatchdog) {
 }
 
 function getBatTemplate() {
-  return `@echo off
+    return `@echo off
 title Pizza Depot Signage - Application Setup
 color 0C
 
