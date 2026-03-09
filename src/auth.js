@@ -42,11 +42,28 @@ async function initDefaultAdmin() {
 
 async function authenticateUser(username, password) {
   const users = await getUsers();
-  const user = users.find((u) => u.username === username);
-  if (!user) return null;
+  let user = users.find((u) => u.username === username);
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) return null;
+  // Fallback: If data storage failed to persist the default admin (Netlify Blobs issue),
+  // we still allow 'admin' to login using the default initial password.
+  const defaultPassword = process.env.ADMIN_PASSWORD || "admin123";
+  if (!user && username === "admin") {
+    if (password === defaultPassword) {
+      user = {
+        id: "admin-1",
+        username: "admin",
+        role: "admin",
+        name: "Franchise Admin",
+      };
+    } else {
+      return null;
+    }
+  } else if (user) {
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return null;
+  } else {
+    return null;
+  }
 
   // Generate JWT
   const token = jwt.sign(
