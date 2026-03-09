@@ -6,6 +6,12 @@
 ================================================================
 #>
 
+param(
+    [switch]$Install,
+    [switch]$Uninstall,
+    [switch]$NoWatchdog
+)
+
 # --- CONFIGURATION -----------------------------------------------------------
 # Auto-generated setup for {{STORE_ID}}
 
@@ -319,12 +325,6 @@ function Uninstall-Signage {
 }
 
 # --- MAIN ENTRY POINT --------------------------------------------------------
-param(
-    [switch]$Install,
-    [switch]$Uninstall,
-    [switch]$NoWatchdog
-)
-
 Write-Host ""
 Write-Host "  =================================================" -ForegroundColor DarkRed
 Write-Host "  |  Pizza Depot Digital Signage Launcher          |" -ForegroundColor DarkRed
