@@ -18,6 +18,7 @@ const cors = require("cors");
 const { getData, setData } = require("./store");
 const { initDefaultAdmin, authenticateUser, changePassword, authMiddleware, checkAuth } = require("./auth");
 const { getLoginHTML } = require("./pages/login");
+const { getPs1Template, getBatTemplate } = require("./setup-scripts");
 
 const app = express();
 
@@ -232,6 +233,17 @@ app.get("/api/heartbeats", authMiddleware, async (req, res) => {
   res.json(heartbeats);
 });
 
+// ─── Setup Scripts ────────────────────────────────────────────────
+app.post("/api/setup-scripts", authMiddleware, (req, res) => {
+  const { storeId, baseUrl } = req.body;
+  if (!storeId || !baseUrl) return res.status(400).json({ error: "storeId and baseUrl required" });
+  res.json({
+    ok: true,
+    ps1: getPs1Template(baseUrl, storeId),
+    bat: getBatTemplate()
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════
 //  DISPLAY ENDPOINT (public — no auth required, for store TVs)
 // ═══════════════════════════════════════════════════════════════════
@@ -372,6 +384,8 @@ function getAdminHTML(user) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pizza Depot Signage — Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
     :root{--fire:#e84e0f;--fire-glow:rgba(232,78,15,.15);--fire-dim:rgba(232,78,15,.08);--bg:#08080a;--surface:#111114;--surface2:#19191e;--border:rgba(255,255,255,.06);--border-hover:rgba(255,255,255,.12);--text:#e8e8ec;--text-dim:#6e6e78;--text-muted:#3e3e48;--mono:'JetBrains Mono',monospace;--sans:'Outfit',sans-serif}
     *{margin:0;padding:0;box-sizing:border-box}
@@ -470,6 +484,21 @@ function getAdminHTML(user) {
     </div>
   </div>
 
+  <div class="modal-overlay" id="setupModal">
+    <div class="modal">
+      <h3>Download Windows Setup</h3>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">This will generate the installation files configured specifically for this store. Run them on the store's PC to set up the displays automatically.</div>
+      <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:6px;font-family:var(--mono)">STORE ID</label>
+      <input type="text" id="setupStoreId" readonly style="background:rgba(255,255,255,.02);color:var(--text-dim)">
+      <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:6px;margin-top:8px;font-family:var(--mono)">SERVER URL</label>
+      <input type="text" id="setupBaseUrl" placeholder="https://signage.pizzadepot.com">
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('setupModal').classList.remove('show')">Cancel</button>
+        <button class="btn btn-fire btn-sm" onclick="downloadSetup()">Download Setup .zip</button>
+      </div>
+    </div>
+  </div>
+
   <div class="header">
     <div class="header-left">
       <div class="logo">🍕</div>
@@ -502,7 +531,10 @@ function getAdminHTML(user) {
     </div>
 
     <div class="main" id="mainContent">
-      <h2 id="storeTitle">Select a store</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <h2 id="storeTitle">Select a store</h2>
+        <button class="btn btn-ghost btn-sm" id="setupBtn" style="display:none" onclick="openSetupModal()">⬇️ Windows PC Setup</button>
+      </div>
       <div class="subtitle" id="storeSub">Choose a location from the sidebar</div>
       <div class="screen-grid" id="screenGrid"></div>
       <div class="quick-section" id="quickActions" style="display:none">
@@ -546,6 +578,7 @@ function getAdminHTML(user) {
       document.getElementById("storeTitle").textContent=store.name;
       document.getElementById("storeSub").textContent="Manage content for "+store.screens+" display screens";
       document.getElementById("quickActions").style.display="block";
+      document.getElementById("setupBtn").style.display="flex";
       const grid=document.getElementById("screenGrid");
       grid.innerHTML="";
       for(let i=1;i<=store.screens;i++){
@@ -636,6 +669,33 @@ function getAdminHTML(user) {
         document.getElementById("currPw").value="";document.getElementById("newPw").value="";document.getElementById("confirmPw").value="";}
       else{err.textContent=(r&&r.error)||"Failed";err.style.display="block"}
     }
+    
+    function openSetupModal(){
+      if(!selStore)return;
+      document.getElementById("setupStoreId").value=selStore;
+      document.getElementById("setupBaseUrl").value=window.location.origin;
+      document.getElementById("setupModal").classList.add("show");
+    }
+    
+    async function downloadSetup(){
+      const storeId=document.getElementById("setupStoreId").value;
+      const baseUrl=document.getElementById("setupBaseUrl").value;
+      if(!storeId||!baseUrl){toast("Missing details");return}
+      
+      const r=await api("/api/setup-scripts",{method:"POST",body:JSON.stringify({storeId,baseUrl})});
+      if(r&&r.ok){
+        const zip=new JSZip();
+        zip.file("Setup-PizzaSignage.bat", r.bat);
+        zip.file("LaunchSignage.ps1", r.ps1);
+        const content=await zip.generateAsync({type:"blob"});
+        saveAs(content,"PizzaSignage_Setup_"+storeId+".zip");
+        document.getElementById("setupModal").classList.remove("show");
+        toast("Setup files downloaded!");
+      }else{
+        toast("Failed to generate setup files");
+      }
+    }
+
     loadData();
   </script>
 </body>
