@@ -60,7 +60,10 @@ const DEMO_MEDIA = [
 app.get("/login", (req, res) => {
   const user = checkAuth(req);
   if (user) return res.redirect("/admin");
-  res.send(getLoginHTML());
+  const defaultPassword = process.env.NODE_ENV !== "production"
+    ? (process.env.ADMIN_PASSWORD || "admin123")
+    : null;
+  res.send(getLoginHTML(null, defaultPassword));
 });
 
 app.get("/", (req, res) => {
